@@ -1,0 +1,30 @@
+{
+  "name": "moan-sample",
+  "version": "0.1.0",
+  "description": "A sample project for using the the moan build tool",
+  "keywords": [
+    "moan",
+    "sample"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Alasdair Mercer",
+    "email": "mercer.alasdair@gmail.com",
+    "url": "http://neocotic.com"
+  },
+  "main": "Moaning.js",
+  "repository": "neocotic/moan-sample.git",
+  "scripts": {
+    "test": "moan"
+  },
+  "devDependencies": {
+    "mkdirp": "^0.5.1",
+    "mkdirp-promise": "^1.0.3",
+    "moan": "^0.1.1",
+    "rimraf": "^2.4.3"
+  },
+  "engines": {
+    "node": ">=4.0"
+  },
+  "private": true
+}

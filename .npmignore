@@ -1,0 +1,8 @@
+.editorconfig
+.gitattributes
+.gitignore
+.npmignore
+
+*.md
+
+Moaning.js
