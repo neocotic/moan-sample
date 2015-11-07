@@ -90,7 +90,7 @@ moan.task('log-asnyc-callback', [ 'build-async-callback', 'get-output-dir' ], (d
   let outputDir = moan.task('get-output-dir').result
   let outputFile = path.join(outputDir, moan.config('fileName'))
 
-  fs.readFile(filePath, { encoding }, (error, version) => {
+  fs.readFile(outputFile, { encoding }, (error, version) => {
     if (error) {
       return done(error)
     }
@@ -110,7 +110,9 @@ moan.task('write-async-callback', [ 'clean-async-callback', 'get-output-dir' ], 
       return done(error)
     }
 
-    fs.writeFile(filePath, data, { encoding }, (error) => {
+    let version = require('./package.json').version
+
+    fs.writeFile(outputFile, version, { encoding }, (error) => {
       if (error) {
         return done(error)
       }
@@ -134,7 +136,7 @@ moan.task('log-sync', [ 'build-sync', 'get-output-dir' ], () => {
   let encoding = moan.config('encoding')
   let outputDir = moan.task('get-output-dir').result
   let outputFile = path.join(outputDir, moan.config('fileName'))
-  let version = fs.readFileSync(filePath, { encoding })
+  let version = fs.readFileSync(outputFile, { encoding })
 
   moan.log.ok(`Version: ${version}`)
 
@@ -144,9 +146,10 @@ moan.task('write-sync', [ 'clean-sync', 'get-output-dir' ], () => {
   let encoding = moan.config('encoding')
   let outputDir = moan.task('get-output-dir').result
   let outputFile = path.join(outputDir, moan.config('fileName'))
+  let version = require('./package.json').version
 
-  mkdirp.sync(outpitDir)
-  fs.writeFileSync(filePath, data, { encoding })
+  mkdirp.sync(outputDir)
+  fs.writeFileSync(outputFile, version, { encoding })
 
   return outputFile
 })
