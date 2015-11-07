@@ -19,16 +19,20 @@ const rimraf = require('rimraf')
 // Configurations
 moan.config('encoding', 'utf8')
 moan.config('fileName', 'version.txt')
+moan.config('outputDir', 'temp/')
 
 // File sets
-moan.fileSet('outputDir', 'temp/')
+moan.fileSet('clean', moan.config('outputDir'))
 
 // Asynchronous tasks using promises
 moan.task('build-async-promise', 'write-async-promise')
 moan.task('clean-async-promise', () => {
-  return moan.fileSet('outputDir').del()
+  return moan.fileSet('clean').del()
 })
-moan.task('log-asnyc-promise', [ 'build-async-promise', 'get-output-dir' ], () => {
+moan.task('create-output-dir-async-promise', () => {
+  return mkdirpPromise(moan.config('outputDir'))
+})
+moan.task('log-async-promise', 'write-async-promise', () => {
   function readFile(filePath, encoding) {
     return new Promise((resolve, reject) => {
       fs.readFile(filePath, { encoding }, (error, data) => {
@@ -41,17 +45,18 @@ moan.task('log-asnyc-promise', [ 'build-async-promise', 'get-output-dir' ], () =
     })
   }
 
-  let outputDir = moan.task('get-output-dir').result
+  let encoding = moan.config('encoding')
+  let outputDir = moan.config('outputDir')
   let outputFile = path.join(outputDir, moan.config('fileName'))
 
-  return readFile(outputFile, moan.config('encoding'))
+  return readFile(outputFile, encoding)
     .then((version) => {
       moan.log.ok(`Version: ${version}`)
 
       return version
     })
 })
-moan.task('write-async-promise', [ 'clean-async-promise', 'get-output-dir' ], () => {
+moan.task('write-async-promise', [ 'clean-async-promise', 'create-output-dir-async-promise' ], () => {
   function writeFile(filePath, data, encoding) {
     return new Promise((resolve, reject) => {
       fs.writeFile(filePath, data, { encoding }, (error) => {
@@ -64,15 +69,12 @@ moan.task('write-async-promise', [ 'clean-async-promise', 'get-output-dir' ], ()
     })
   }
 
-  let outputDir = moan.task('get-output-dir').result
+  let encoding = moan.config('encoding')
+  let outputDir = moan.config('outputDir')
   let outputFile = path.join(outputDir, moan.config('fileName'))
+  let version = require('./package.json').version
 
-  return mkdirpPromise(outputDir)
-    .then(() => {
-      let version = require('./package.json').version
-
-      return writeFile(outputFile, version, moan.config('encoding'))
-    })
+  return writeFile(outputFile, version, encoding)
 })
 moan.task('error-async-promise', () => {
   return Promise.reject('Asynchronous failed!')
@@ -80,14 +82,15 @@ moan.task('error-async-promise', () => {
 
 // Asynchronous tasks using callback functions
 moan.task('build-async-callback', 'write-async-callback')
-moan.task('clean-async-callback', 'get-output-dir', (done) => {
-  let outputDir = moan.task('get-output-dir').result
-
-  rimraf(outputDir, done)
+moan.task('clean-async-callback', (done) => {
+  rimraf(moan.config('outputDir'), done)
 })
-moan.task('log-asnyc-callback', [ 'build-async-callback', 'get-output-dir' ], (done) => {
+moan.task('create-output-dir-async-callback', (done) => {
+  mkdirp(moan.config('outputDir'), done)
+})
+moan.task('log-async-callback', 'write-async-callback', (done) => {
   let encoding = moan.config('encoding')
-  let outputDir = moan.task('get-output-dir').result
+  let outputDir = moan.config('outputDir')
   let outputFile = path.join(outputDir, moan.config('fileName'))
 
   fs.readFile(outputFile, { encoding }, (error, version) => {
@@ -100,25 +103,18 @@ moan.task('log-asnyc-callback', [ 'build-async-callback', 'get-output-dir' ], (d
     done(null, version)
   })
 })
-moan.task('write-async-callback', [ 'clean-async-callback', 'get-output-dir' ], (done) => {
+moan.task('write-async-callback', [ 'clean-async-callback', 'create-output-dir-async-callback' ], (done) => {
   let encoding = moan.config('encoding')
-  let outputDir = moan.task('get-output-dir').result
+  let outputDir = moan.config('outputDir')
   let outputFile = path.join(outputDir, moan.config('fileName'))
+  let version = require('./package.json').version
 
-  mkdirp(outputDir, (error) => {
+  fs.writeFile(outputFile, version, { encoding }, (error) => {
     if (error) {
       return done(error)
     }
 
-    let version = require('./package.json').version
-
-    fs.writeFile(outputFile, version, { encoding }, (error) => {
-      if (error) {
-        return done(error)
-      }
-
-      done(null, outputFile)
-    })
+    done(null, outputFile)
   })
 })
 moan.task('error-async-callback', (done) => {
@@ -127,14 +123,15 @@ moan.task('error-async-callback', (done) => {
 
 // Synchronous tasks
 moan.task('build-sync', 'write-sync')
-moan.task('clean-sync', 'get-output-dir', () => {
-  let outputDir = moan.task('get-output-dir').result
-
-  rimraf.sync(outputDir)
+moan.task('clean-sync', () => {
+  rimraf.sync(moan.config('outputDir'))
 })
-moan.task('log-sync', [ 'build-sync', 'get-output-dir' ], () => {
+moan.task('create-output-dir-sync', () => {
+  mkdirp.sync(moan.config('outputDir'))
+})
+moan.task('log-sync', 'write-sync', () => {
   let encoding = moan.config('encoding')
-  let outputDir = moan.task('get-output-dir').result
+  let outputDir = moan.config('outputDir')
   let outputFile = path.join(outputDir, moan.config('fileName'))
   let version = fs.readFileSync(outputFile, { encoding })
 
@@ -142,13 +139,12 @@ moan.task('log-sync', [ 'build-sync', 'get-output-dir' ], () => {
 
   return version
 })
-moan.task('write-sync', [ 'clean-sync', 'get-output-dir' ], () => {
+moan.task('write-sync', [ 'clean-sync', 'create-output-dir-sync' ], () => {
   let encoding = moan.config('encoding')
-  let outputDir = moan.task('get-output-dir').result
+  let outputDir = moan.config('outputDir')
   let outputFile = path.join(outputDir, moan.config('fileName'))
   let version = require('./package.json').version
 
-  mkdirp.sync(outputDir)
   fs.writeFileSync(outputFile, version, { encoding })
 
   return outputFile
@@ -157,13 +153,10 @@ moan.task('error-sync', () => {
   throw new Error('Asynchronous failed!')
 })
 
-// Helper tasks
-moan.task('get-output-dir', () => moan.fileSet('outputDir').first())
-
 // Task groups
 moan.task('build', [ 'build-async-callback', 'build-async-promise', 'build-sync' ])
 moan.task('clean', [ 'clean-async-callback', 'clean-async-promise', 'clean-sync' ])
-moan.task('error', [ 'error-asnyc-callback', 'error-async-promise', 'error-sync' ])
+moan.task('error', [ 'error-async-callback', 'error-async-promise', 'error-sync' ])
 moan.task('log', [ 'log-async-callback', 'log-async-promise', 'log-sync' ])
 
 // Default task
